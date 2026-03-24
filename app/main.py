@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile
 from csv import DictReader
-from .database import get_demographics_data, upload_demographics_data
+from .database import get_demographics_data, upload_demographics_data, get_demographics_data_orm
 import pandas as pd
 
 app = FastAPI()
@@ -31,16 +31,16 @@ async def upload_csv(file: UploadFile):
 
 @app.get("/demographics")
 def get_demographics():
-    data = get_demographics_data()
+    data = get_demographics_data_orm()
     result = []
     for row in data:
         result.append({
-            "id": row[0],
-            "state": row[1],
-            "anemia_women" : row[2],
-            "female_education_years": row[3],
-            "bmi_low": row[4],
-            "rural_population": row[5],
-            "child_morality_rate": row[6]
+            "id": row.id,
+            "state": row.state,
+            "anemia_women" : row.anemia_women,
+            "female_education_years": row.female_education_years,
+            "bmi_low": row.bmi_low,
+            "rural_population": row.rural_population,
+            "child_mortality_rate": row.child_mortality_rate
         })
     return {"data": result}
