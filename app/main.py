@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile
 from csv import DictReader
-from .database import get_demographics_data, upload_demographics_data, get_demographics_data_orm
+from .database import get_states_from_db, upload_csv_to_pipeline, get_demographics_data_orm
 import pandas as pd
 
 app = FastAPI()
@@ -26,7 +26,7 @@ async def upload_csv(file: UploadFile):
                             detail="Failed to process CSV file")
 
     row_count = len(df)
-    upload_demographics_data(df)
+    upload_csv_to_pipeline(df)
     return {"message": "CSV file uploaded successfully!"}
 
 @app.get("/demographics")
@@ -44,3 +44,8 @@ def get_demographics():
             "child_mortality_rate": row.child_mortality_rate
         })
     return {"data": result}
+
+@app.get("/states")
+def get_states():
+    states = get_states_from_db()
+    return {"states": states}
