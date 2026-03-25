@@ -1,5 +1,6 @@
 # Connect with Postgres SQL Database using SQLAlchemy
 import uuid
+import logging
 
 from fastapi import HTTPException
 
@@ -11,6 +12,8 @@ from .models import Demographics, DemographicsStaging
 from sqlalchemy import select
 
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 DATABASE_URL = "postgresql://postgres:Sql123@localhost/nfhs_db"
 engine = create_engine(DATABASE_URL)
@@ -41,35 +44,29 @@ def _upload_demographic_data_to_stg(df):
         try:
             df.to_sql("demographics_stg", connection, if_exists="append", index=False)
         except Exception as e:
-            logger.error(f"Failed to upload demographics data to staging: {e}")
+            logger.exception(f"Failed to upload demographics data to staging: {e}")
             raise HTTPException(status_code=500, detail="Failed to upload demographics data to staging")
 
 def _move_data_from_stg_to_main(upload_id):
-    data = _get_data_from_stg(upload_id)
-    df = pd.DataFrame([{
-        "state": row.state,
-        "anemia_women": row.anemia_women,
-        "female_education_years": row.female_education_years,
-        "bmi_low": row.bmi_low,
-        "rural_population": row.rural_population,
-        "child_mortality_rate": row.child_mortality_rate
-    } for row in data])
-
-    _delete_demographics_data()
-    upload_demographics_data(df)
-
-def _get_data_from_stg(upload_id):
-    with Session(engine) as session:
-        stmt = select(DemographicsStaging).where(DemographicsStaging.upload_id == upload_id)
-        return session.execute(stmt).scalars().all()
-
-def _delete_demographics_data():
-    with engine.connect() as connection:
+    DELETE_QUERY = "DELETE FROM demographics"
+    INSERT_QUERY = """INSERT INTO demographics
+                        (state, anemia_women, female_education_years, 
+                        bmi_low, rural_population, child_mortality_rate)
+                        SELECT state, anemia_women, female_education_years,
+                        bmi_low, rural_population, child_mortality_rate
+                        FROM demographics_stg
+                        WHERE upload_id = :upload_id
+                        """
+    with engine.begin() as connection:
         try:
-            connection.execute(text("DELETE FROM demographics"))
+            connection.execute(text(DELETE_QUERY))
+            logger.info("Deleted existing data from demographics table")
+
+            connection.execute(text(INSERT_QUERY), {"upload_id": upload_id})
+            logger.info("Inserted new data into demographics table from staging")
         except Exception as e:
-            logger.error(f"Failed to delete demographics data: {e}")
-            raise HTTPException(status_code=500, detail="Failed to delete demographics data")
+            logger.exception(f"Failed to delete and insert demographics data: {e}")
+            raise HTTPException(status_code=500, detail="Failed to delete and insert demographics data")
 
 def get_demographics_data_orm():
     # Using SQLAlchemy ORM to fetch data from the demographics table
