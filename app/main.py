@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, UploadFile
 from csv import DictReader
 from .database import get_states_from_db, upload_csv_to_pipeline, get_demographics_data_orm
-from .service import get_high_risk_states_with_reason, get_risk_scores_for_all_states, get_top_n_states_by_risk_score
+from .service import get_high_risk_states_with_reason, get_risk_scores_for_all_states, get_state_profile_service, get_top_n_states_by_risk_score
 
 import pandas as pd
 
@@ -67,3 +67,8 @@ def get_risk_scores():
 def get_top_states_by_score(n: int = 5):
     top_states = get_top_n_states_by_risk_score()
     return {"top_states_by_score": top_states}
+
+@app.get("/state-profile/{state_name}")
+def get_state_profile(state_name: str):
+    state_profile = get_state_profile_service(state_name)
+    return state_profile

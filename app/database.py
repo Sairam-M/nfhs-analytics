@@ -78,3 +78,11 @@ def get_states_from_db():
     with Session(engine) as session:
         stmt = select(Demographics.state)
         return session.execute(stmt).scalars().all()
+
+def get_state_data(state_name):
+    with Session(engine) as session:
+        stmt = select(Demographics).where(Demographics.state == state_name)
+        result = session.execute(stmt).scalar_one_or_none()
+        if result is None:
+            raise HTTPException(status_code=404, detail=f"State '{state_name}' not found")
+        return result
