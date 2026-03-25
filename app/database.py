@@ -11,11 +11,16 @@ from sqlalchemy.orm import Session
 from .models import Demographics, DemographicsStaging
 from sqlalchemy import select
 
+from dotenv import load_dotenv
+
 import pandas as pd
+import os
+
+load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = "postgresql://postgres:Sql123@localhost/nfhs_db"
+DATABASE_URL = os.getenv("DATABASE_URL")
 engine = create_engine(DATABASE_URL)
 
 def get_demographics_data():
