@@ -5,6 +5,15 @@ class DemographicsServiceConstants:
     ANEMIA_THRESHOLD = 50
     EDUCATION_THRESHOLD = 6
 
+    ANEMIA_WEIGHT = 0.4
+    CHILD_MORTALITY_WEIGHT = 0.3
+    BMI_WEIGHT = 0.3
+
+    RISK_BAND_HIGH_THRESHOLD = 70
+    RISK_BAND_MODERATE_THRESHOLD = 40
+
+    TOP_N_LIMIT = 20
+
 class RiskLevel:
     LOW = "Low"
     MODERATE = "Moderate"
@@ -44,3 +53,46 @@ def get_high_risk_states_with_reason():
         if evaluation["risk"] == RiskLevel.HIGH:
             high_risk_states.append(evaluation)
     return high_risk_states
+
+# service.py
+def calculate_risk_score(state):
+    score = state.anemia_women * DemographicsServiceConstants.ANEMIA_WEIGHT +\
+        state.child_mortality_rate * DemographicsServiceConstants.CHILD_MORTALITY_WEIGHT +\
+        state.bmi_low * DemographicsServiceConstants.BMI_WEIGHT
+    
+    return round(score, 2)
+
+def get_risk_band(score):
+    if score >= DemographicsServiceConstants.RISK_BAND_HIGH_THRESHOLD:
+        return RiskLevel.HIGH
+    elif score >= DemographicsServiceConstants.RISK_BAND_MODERATE_THRESHOLD:
+        return RiskLevel.MODERATE
+    else:
+        return RiskLevel.LOW
+
+def get_risk_profile_for_state(state):
+    score = calculate_risk_score(state)
+    risk_band = get_risk_band(score)
+    return {
+        "state": state.state,
+        "anemia_women": state.anemia_women,
+        "bmi_low": state.bmi_low,
+        "child_mortality_rate": state.child_mortality_rate,
+        "risk_score": score,
+        "risk_band": risk_band
+    }
+
+def get_risk_scores_for_all_states():
+    state_list = get_demographics_data_orm()
+    risk_profiles = []
+    for state in state_list:
+        risk_profile = get_risk_profile_for_state(state)
+        risk_profiles.append(risk_profile)
+    return risk_profiles
+
+def get_top_n_states_by_risk_score(n=5):
+    n = max(n, 1)  # Ensure n is at least 1
+    n = min(DemographicsServiceConstants.TOP_N_LIMIT, n)
+    risk_profiles = get_risk_scores_for_all_states()
+    sorted_profiles = sorted(risk_profiles, key=lambda x: x["risk_score"], reverse=True)
+    return sorted_profiles[:n]
