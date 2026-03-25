@@ -1,6 +1,8 @@
 from fastapi import FastAPI, HTTPException, UploadFile
 from csv import DictReader
 from .database import get_states_from_db, upload_csv_to_pipeline, get_demographics_data_orm
+from .service import get_high_risk_states_with_reason
+
 import pandas as pd
 
 app = FastAPI()
@@ -49,3 +51,10 @@ def get_demographics():
 def get_states():
     states = get_states_from_db()
     return {"states": states}
+
+# main.py
+@app.get("/high-risk-states")
+def get_high_risk_states():
+    # Implementation for fetching high-risk states
+    states = get_high_risk_states_with_reason()
+    return {"high_risk_states": states}
