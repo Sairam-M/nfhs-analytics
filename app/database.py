@@ -34,7 +34,7 @@ def upload_demographics_data(df):
             df.to_sql("demographics", connection, if_exists="append", index=False)
         except Exception as e:
             logger.error(f"Failed to upload demographics data: {e}")
-            raise HTTPException(status_code=500, detail="Failed to upload demographics data")
+            raise DatabaseException("Failed to upload demographics data")
 
 def upload_csv_to_pipeline(df):
     upload_id = str(uuid.uuid4())
@@ -50,7 +50,7 @@ def _upload_demographic_data_to_stg(df):
             df.to_sql("demographics_stg", connection, if_exists="append", index=False)
         except Exception as e:
             logger.exception(f"Failed to upload demographics data to staging: {e}")
-            raise HTTPException(status_code=500, detail="Failed to upload demographics data to staging")
+            raise DatabaseException("Failed to upload demographics data to staging")
 
 def _move_data_from_stg_to_main(upload_id):
     DELETE_QUERY = "DELETE FROM demographics"
@@ -71,7 +71,7 @@ def _move_data_from_stg_to_main(upload_id):
             logger.info("Inserted new data into demographics table from staging")
         except Exception as e:
             logger.exception(f"Failed to delete and insert demographics data: {e}")
-            raise HTTPException(status_code=500, detail="Failed to delete and insert demographics data")
+            raise DatabaseException("Failed to delete and insert demographics data")
 
 def get_demographics_data_orm():
     # Using SQLAlchemy ORM to fetch data from the demographics table
@@ -89,5 +89,11 @@ def get_state_data(state_name):
         stmt = select(Demographics).where(Demographics.state == state_name)
         result = session.execute(stmt).scalar_one_or_none()
         if result is None:
-            raise HTTPException(status_code=404, detail=f"State '{state_name}' not found")
+            raise StateNotFoundException(f"State '{state_name}' not found")
         return result
+
+class StateNotFoundException(Exception):
+    pass
+
+class DatabaseException(Exception):
+    pass

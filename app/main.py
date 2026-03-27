@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException, UploadFile
 from csv import DictReader
-from .database import get_states_from_db, upload_csv_to_pipeline, get_demographics_data_orm
+from .database import DatabaseException, StateNotFoundException, get_states_from_db, upload_csv_to_pipeline, get_demographics_data_orm
 from .service import get_high_risk_states_with_reason, get_risk_scores_for_all_states, get_state_profile_service, get_top_n_states_by_risk_score
 
 import pandas as pd
@@ -26,9 +26,24 @@ async def upload_csv(file: UploadFile):
         # Raise HTTPException with appropriate status code and error message
         raise HTTPException(status_code=400, 
                             detail="Failed to process CSV file")
+    
+    # Data validation
+    REQUIRED_COLUMNS = {"state", "anemia_women", "bmi_low",
+                        "child_mortality_rate","female_education_years",
+                        "rural_population"}
 
+    missing = REQUIRED_COLUMNS - set(df.columns)
+
+    if missing:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Missing required columns: {missing}"
+        )
     row_count = len(df)
-    upload_csv_to_pipeline(df)
+    try:
+        upload_csv_to_pipeline(df)
+    except DatabaseException as e:
+        raise HTTPException(status_code=500, detail=str(e))
     return {"message": "CSV file uploaded successfully!"}
 
 @app.get("/demographics")
@@ -70,5 +85,8 @@ def get_top_states_by_score(n: int = 5):
 
 @app.get("/state-profile/{state_name}")
 def get_state_profile(state_name: str):
-    state_profile = get_state_profile_service(state_name)
+    try:
+        state_profile = get_state_profile_service(state_name)
+    except StateNotFoundException as e:
+        raise HTTPException(status_code=404, detail=str(e))
     return state_profile
