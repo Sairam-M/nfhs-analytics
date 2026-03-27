@@ -71,7 +71,6 @@ def get_score_band(score):
         return RiskLevel.LOW
 
 def get_risk_profile_for_state(state):
-    state_risk = evaluate_state_risk(state)
     score = calculate_risk_score(state)
     score_band = get_score_band(score)
     return {
@@ -109,7 +108,8 @@ def get_state_profile_service(state_name):
             "anemia_women": state.anemia_women,
             "bmi_low": state.bmi_low,
             "child_mortality_rate": state.child_mortality_rate,
-            "female_education_years": state.female_education_years
+            "female_education_years": state.female_education_years,
+            "rural_population": state.rural_population
         },
         "risk_category": state_profile["risk"],
         "reason": state_profile["reason"],
