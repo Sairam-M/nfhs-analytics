@@ -2,10 +2,23 @@ from fastapi import FastAPI, HTTPException, UploadFile
 from csv import DictReader
 from .database import DatabaseException, StateNotFoundException, get_states_from_db, upload_csv_to_pipeline, get_demographics_data_orm
 from .service import get_high_risk_states_with_reason, get_risk_scores_for_all_states, get_state_profile_service, get_top_n_states_by_risk_score
+from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
 
 import pandas as pd
+import os
 
 app = FastAPI()
+
+load_dotenv()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("FRONTEND_URL")],  # frontend URL
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def home():
