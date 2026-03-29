@@ -28,15 +28,15 @@ def evaluate_state_risk(state):
     if state.anemia_women > DemographicsServiceConstants.ANEMIA_THRESHOLD and\
         state.female_education_years < DemographicsServiceConstants.EDUCATION_THRESHOLD:
             evaluation["risk"] = RiskLevel.HIGH
-            evaluation["reason"] = "High anemia ({}) and low education levels ({})".format(\
+            evaluation["reason"] = "High anemia ({} %) and low education levels ({} y)".format(\
                 state.anemia_women, state.female_education_years
                 )
     elif state.anemia_women > DemographicsServiceConstants.ANEMIA_THRESHOLD:
         evaluation["risk"] = RiskLevel.MODERATE
-        evaluation["reason"] = "High anemia levels ({})".format(state.anemia_women)
+        evaluation["reason"] = "High anemia levels ({} %)".format(state.anemia_women)
     elif state.female_education_years < DemographicsServiceConstants.EDUCATION_THRESHOLD:
         evaluation["risk"] = RiskLevel.MODERATE
-        evaluation["reason"] = "Low education levels ({})".format(state.female_education_years)
+        evaluation["reason"] = "Low education levels ({} y)".format(state.female_education_years)
     else:
         evaluation["risk"] = RiskLevel.LOW
         evaluation["reason"] = "Anemia and education levels are within acceptable ranges"

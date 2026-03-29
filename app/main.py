@@ -93,7 +93,7 @@ def get_risk_scores():
 
 @app.get("/top-states-by-score")
 def get_top_states_by_score(n: int = 5):
-    top_states = get_top_n_states_by_risk_score()
+    top_states = get_top_n_states_by_risk_score(n)
     return {"top_states_by_score": top_states}
 
 @app.get("/state-profile/{state_name}")
