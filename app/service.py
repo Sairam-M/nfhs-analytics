@@ -31,18 +31,22 @@ def evaluate_state_risk(state):
         "anemia_women": state.anemia_women,
         "female_education_years": state.female_education_years
     }
-    if state.anemia_women > DemographicsServiceConstants.ANEMIA_THRESHOLD and\
-        state.female_education_years < DemographicsServiceConstants.EDUCATION_THRESHOLD:
+    if (state.anemia_women and  state.anemia_women > DemographicsServiceConstants.ANEMIA_THRESHOLD) and\
+        (state.female_education_years and \
+         state.female_education_years < DemographicsServiceConstants.EDUCATION_THRESHOLD):
             evaluation["risk"] = RiskLevel.HIGH
             evaluation["reason"] = "High anemia ({} %) and low education levels ({} y)".format(\
                 state.anemia_women, state.female_education_years
                 )
-    elif state.anemia_women > DemographicsServiceConstants.ANEMIA_THRESHOLD:
+    elif state.anemia_women and state.anemia_women > DemographicsServiceConstants.ANEMIA_THRESHOLD:
         evaluation["risk"] = RiskLevel.MODERATE
         evaluation["reason"] = "High anemia levels ({} %)".format(state.anemia_women)
-    elif state.female_education_years < DemographicsServiceConstants.EDUCATION_THRESHOLD:
+    elif state.female_education_years and state.female_education_years < DemographicsServiceConstants.EDUCATION_THRESHOLD:
         evaluation["risk"] = RiskLevel.MODERATE
         evaluation["reason"] = "Low education levels ({} y)".format(state.female_education_years)
+    elif state.anemia_women is None and state.female_education_years is None:
+        evaluation["risk"] = None
+        evaluation["reason"] = "Missing anemia_women and female_education_years data"
     else:
         evaluation["risk"] = RiskLevel.LOW
         evaluation["reason"] = "Anemia and education levels are within acceptable ranges"
@@ -62,6 +66,10 @@ def get_high_risk_states_with_reason():
 
 # service.py
 def calculate_risk_score(state):
+    if state.anemia_women is None or\
+        state.child_mortality_rate is None or\
+        state.bmi_low is None:
+            return None 
     score = state.anemia_women * DemographicsServiceConstants.ANEMIA_WEIGHT +\
         state.child_mortality_rate * DemographicsServiceConstants.CHILD_MORTALITY_WEIGHT +\
         state.bmi_low * DemographicsServiceConstants.BMI_WEIGHT
@@ -69,6 +77,8 @@ def calculate_risk_score(state):
     return round(score, 2)
 
 def get_score_band(score):
+    if score is None:
+        return None
     if score >= DemographicsServiceConstants.SCORE_BAND_HIGH_THRESHOLD:
         return RiskLevel.HIGH
     elif score >= DemographicsServiceConstants.SCORE_BAND_MODERATE_THRESHOLD:
@@ -100,7 +110,9 @@ def get_top_n_states_by_risk_score(n=5):
     n = max(n, 1)  # Ensure n is at least 1
     n = min(DemographicsServiceConstants.TOP_N_LIMIT, n)
     risk_profiles = get_risk_scores_for_all_states()
-    sorted_profiles = sorted(risk_profiles, key=lambda x: x["risk_score"], reverse=True)
+    non_null_risk_profiles = filter(lambda risk: risk["risk_score"] is not None, risk_profiles)
+    sorted_profiles = sorted(non_null_risk_profiles, key=lambda x: x["risk_score"], reverse=True)
+    sorted_profiles += filter(lambda risk: risk["risk_score"] is None, risk_profiles)
     return sorted_profiles[:n]
 
 def get_state_profile_service(state_name):
