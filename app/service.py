@@ -1,5 +1,7 @@
 # service.py
-from .database import get_demographics_data_orm, get_state_data
+from .database import get_demographics_data_orm, get_state_data, upload_df_to_pipeline
+
+import pandas as pd
 
 class DemographicsServiceConstants:
     ANEMIA_THRESHOLD = 50
@@ -13,6 +15,10 @@ class DemographicsServiceConstants:
     SCORE_BAND_MODERATE_THRESHOLD = 40
 
     TOP_N_LIMIT = 20
+
+    REQUIRED_COLUMNS = ["state", "anemia_women", "bmi_low",
+                        "child_mortality_rate","female_education_years",
+                        "rural_population"]
 
 class RiskLevel:
     LOW = "Low"
@@ -116,3 +122,39 @@ def get_state_profile_service(state_name):
         "risk_score":score,
         "score_band": score_band
     }
+
+
+def drop_extra_column(df):
+    # Remove extra columns if any
+    existing_columns = set(df.columns)
+    required_columns = set(DemographicsServiceConstants.REQUIRED_COLUMNS)
+
+    extra_columns = existing_columns - required_columns
+    df = df.drop(columns = list(extra_columns))
+
+    return df
+
+def clean_state_column(df):
+    df["state"] = df["state"].astype(str).str.strip()
+    df = df[
+            df["state"].notna() & 
+            (df["state"] != "") &
+            (df["state"].str.lower() != "nan")
+        ]
+
+    return df
+
+def clean_numeric_columns(df, numeric_cols):
+    df[numeric_cols] = df[numeric_cols].apply(
+        pd.to_numeric, errors="coerce")
+
+    # 4. Handle invalid values
+    df[numeric_cols] = df[numeric_cols].mask(df[numeric_cols] < 0)
+    return df
+
+def validate_and_upload_df(df):
+    df = drop_extra_column(df)
+    df = clean_state_column(df)
+    numeric_cols = set(DemographicsServiceConstants.REQUIRED_COLUMNS) - {"state"}
+    df = clean_numeric_columns(df, list(numeric_cols))
+    upload_df_to_pipeline(df)

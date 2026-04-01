@@ -1,7 +1,8 @@
 from fastapi import FastAPI, HTTPException, UploadFile
 from csv import DictReader
-from .database import DatabaseException, StateNotFoundException, get_states_from_db, upload_csv_to_pipeline, get_demographics_data_orm
-from .service import get_high_risk_states_with_reason, get_risk_scores_for_all_states, get_state_profile_service, get_top_n_states_by_risk_score
+from .database import DatabaseException, StateNotFoundException, get_states_from_db, get_demographics_data_orm
+from .service import get_high_risk_states_with_reason, get_risk_scores_for_all_states, get_state_profile_service, get_top_n_states_by_risk_score,\
+    validate_and_upload_df, DemographicsServiceConstants
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 
@@ -41,11 +42,7 @@ async def upload_csv(file: UploadFile):
                             detail="Failed to process CSV file")
     
     # Data validation
-    REQUIRED_COLUMNS = {"state", "anemia_women", "bmi_low",
-                        "child_mortality_rate","female_education_years",
-                        "rural_population"}
-
-    missing = REQUIRED_COLUMNS - set(df.columns)
+    missing = set(DemographicsServiceConstants.REQUIRED_COLUMNS) - set(df.columns)
 
     if missing:
         raise HTTPException(
@@ -54,7 +51,7 @@ async def upload_csv(file: UploadFile):
         )
     row_count = len(df)
     try:
-        upload_csv_to_pipeline(df)
+        validate_and_upload_df(df)
     except DatabaseException as e:
         raise HTTPException(status_code=500, detail=str(e))
     return {"message": "CSV file uploaded successfully!"}

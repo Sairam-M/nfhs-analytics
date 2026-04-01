@@ -36,7 +36,7 @@ def upload_demographics_data(df):
             logger.error(f"Failed to upload demographics data: {e}")
             raise DatabaseException("Failed to upload demographics data")
 
-def upload_csv_to_pipeline(df):
+def upload_df_to_pipeline(df):
     upload_id = str(uuid.uuid4())
     df["upload_id"] = upload_id
     df["upload_time"] = pd.Timestamp.now()
