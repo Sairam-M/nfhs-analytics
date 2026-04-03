@@ -2,6 +2,10 @@
 
 A backend analytics system built using **FastAPI** and **PostgreSQL** to process structured demographic data and generate risk-based insights via REST APIs.
 
+Link to Application deployed in Vercel - 🔗 [Web App)](https://nfhs-analytics-frontend-vercel.vercel.app/)
+
+Backend API Docs Page - 🔗 [Backend API Docs (FastAPI Swagger UI)](https://nfhs-analytics.onrender.com/docs)
+
 ## 🚀 Features
 
 * Data pipeline with **staging → main tables** for clean and reliable data handling
