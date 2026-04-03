@@ -33,7 +33,7 @@ async def upload_csv(file: UploadFile):
         # raise HTTPException with appropriate status code
         raise HTTPException(status_code=400, 
                             detail="Invalid file type. Please upload a CSV file.")
-    # Handle empty File
+    
     try:
         df = pd.read_csv(file.file)
     except Exception as e:

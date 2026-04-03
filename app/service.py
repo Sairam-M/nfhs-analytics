@@ -147,9 +147,10 @@ def drop_extra_column(df):
     return df
 
 def clean_state_column(df):
+    df = df[df["state"].notna()].copy()
+
     df["state"] = df["state"].astype(str).str.strip()
     df = df[
-            df["state"].notna() & 
             (df["state"] != "") &
             (df["state"].str.lower() != "nan")
         ]

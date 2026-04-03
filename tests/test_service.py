@@ -1,5 +1,11 @@
 import pytest
 from app import service
+from .test_utility import upload_data_for_testing,\
+                        VALID_DATA_1,\
+                        DIRTY_STATE_DATA,\
+                        DIRTY_NUMERIC_DATA,\
+                        EXTRA_COLUMN_DATA
+import pandas as pd
 
 class State:
     def __init__(self, state, anemia_women=None, 
@@ -72,6 +78,25 @@ def test_evaluate_state_risk_low():
     result = service.evaluate_state_risk(State(**sample_input))
     assert result["risk"] == service.RiskLevel.LOW
 
+def test_evaluate_state_risk_missing_data_both():
+    sample_input = {
+        "state": "Test State",
+        "anemia_women": None,
+        "female_education_years": None
+    }
+    result = service.evaluate_state_risk(State(**sample_input))
+    assert result["risk"] == None
+
+
+def test_evaluate_state_risk_missing_data_one():
+    sample_input = {
+        "state": "Test State",
+        "anemia_women": None,
+        "female_education_years": 5
+    }
+    result = service.evaluate_state_risk(State(**sample_input))
+    assert result["risk"] == service.RiskLevel.MODERATE
+
 
 # -------- calculate_risk_score --------
 def test_calculate_risk_score_basic():
@@ -87,6 +112,17 @@ def test_calculate_risk_score_basic():
     assert isinstance(score, (int, float))
     assert score == pytest.approx(33.5, abs=0.01)
 
+def test_calculate_risk_score_missing_data():
+    sample_input = {
+        "state": "Test State",
+        "anemia_women": 50,
+        "child_mortality_rate": None,
+        "bmi_low": 30
+    }
+
+    score = service.calculate_risk_score(State(**sample_input))
+
+    assert score == None
 
 # -------- get_score_band --------
 def test_get_score_band_low():
@@ -94,6 +130,12 @@ def test_get_score_band_low():
     band = service.get_score_band(score)
 
     assert band == service.RiskLevel.LOW
+
+def test_get_score_band_missing_data():
+    score = None
+    band = service.get_score_band(score)
+
+    assert band == None
 
 def test_get_score_band_moderate():
     score = 50
@@ -121,31 +163,44 @@ def test_get_score_band_moderate_high_edge():
 
 # -------- get_top_n_states_by_risk_score --------
 def test_top_n_states_basic():
+    upload_data_for_testing(VALID_DATA_1)
 
-    result = service.get_top_n_states_by_risk_score(n=6)
+    result = service.get_top_n_states_by_risk_score(n=3)
 
-    assert len(result) == 6
+    assert len(result) == 3
     assert result[0]["risk_score"] >= result[1]["risk_score"]
 
 def test_top_n_states_edge_zero():
+    upload_data_for_testing(VALID_DATA_1)
     result = service.get_top_n_states_by_risk_score(n=0)
 
     assert len(result) == 1
 
 def test_top_n_states_edge_greater_than_limit():
+    upload_data_for_testing(VALID_DATA_1)
     result = service.get_top_n_states_by_risk_score(n=22)
 
-    assert len(result) <= 20
+    assert len(result) == 5
 
 def test_top_n_states_order():
+    upload_data_for_testing(VALID_DATA_1)
     result = service.get_top_n_states_by_risk_score(n=5)
 
+    flag = False
+    if result[0]["risk_score"] is None:
+        flag = True
     for i in range(len(result) - 1):
-        assert result[i]["risk_score"] >= result[i + 1]["risk_score"]
+        if not flag and result[i+1]["risk_score"] is None:
+            flag = True
+        if not flag:
+            assert result[i]["risk_score"] >= result[i + 1]["risk_score"]
+        else:
+            assert result[i + 1]["risk_score"] is None
 
 # -------- get_state_profile --------
 def test_get_state_profile_structure():
-    state_name = "Tamil Nadu"
+    upload_data_for_testing(VALID_DATA_1)
+    state_name = "B"
     result = service.get_state_profile_service(state_name)
 
     assert isinstance(result, dict)
@@ -156,7 +211,8 @@ def test_get_state_profile_structure():
     assert "score_band" in result
 
 def test_get_state_profile_metrics_structure():
-    state_name = "Tamil Nadu"
+    upload_data_for_testing(VALID_DATA_1)
+    state_name = "B"
     result = service.get_state_profile_service(state_name)
     metrics = result["metrics"]
     assert "anemia_women" in metrics
@@ -164,3 +220,47 @@ def test_get_state_profile_metrics_structure():
     assert "child_mortality_rate" in metrics
     assert "female_education_years" in metrics
     assert "rural_population" in metrics
+
+# ------ data cleaning --------------
+def test_drop_extra_columns():
+    df = pd.DataFrame(EXTRA_COLUMN_DATA)
+    
+    clean_df = service.drop_extra_column(df)
+
+    columns = set(clean_df.columns)
+    required_columns = set(service.DemographicsServiceConstants.REQUIRED_COLUMNS)
+
+    assert "unexpected_col" not in columns
+    assert len(columns) == len(required_columns)
+    assert len(required_columns - columns) == 0
+
+def test_clean_state_column():
+    df = pd.DataFrame(DIRTY_STATE_DATA)
+
+    clean_df = service.clean_state_column(df)
+
+    # There are 3/5 rows with dirty state name
+    assert len(clean_df) == 2
+
+def test_clean_numeric_columns():
+#     DIRTY_NUMERIC_DATA = {
+#     "state": ["A", "B", "C"],
+#     "anemia_women": [50, "invalid", -10],
+#     "bmi_low": [20, None, 40],
+#     "child_mortality_rate": [10, "NaN", 5],
+#     "female_education_years": [8, "text", 2],
+#     "rural_population": [40, 30, 35]
+# }
+    df = pd.DataFrame(DIRTY_NUMERIC_DATA)
+    numeric_cols = [
+        "anemia_women", "bmi_low", "child_mortality_rate",
+        "female_education_years", "rural_population"
+    ]
+    clean_df = service.clean_numeric_columns(df, numeric_cols)
+    
+    assert pd.isna(clean_df.loc[1, "anemia_women"])
+    assert pd.isna(clean_df.loc[1, "bmi_low"])
+    assert pd.isna(clean_df.loc[1, "child_mortality_rate"])
+    assert pd.isna(clean_df.loc[1, "female_education_years"])
+    
+    assert pd.isna(clean_df.loc[2, "anemia_women"])

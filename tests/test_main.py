@@ -4,6 +4,11 @@ import os
 from fastapi.testclient import TestClient
 from app.main import app
 
+from .test_utility import upload_data_for_testing,\
+                            VALID_DATA_1,\
+                            VALID_DATA_2,\
+                            SMALL_DATA_1
+
 import pandas as pd
 
 client = TestClient(app)
@@ -12,12 +17,12 @@ client = TestClient(app)
 def test_upload_csv_valid():
     # Create sample dataframe
     df = pd.DataFrame({
-        "state": ["A", "B"],
-        "anemia_women": [50, 60],
-        "bmi_low": [20, 30],
-        "child_mortality_rate": [10,15],
-        "female_education_years": [7,8],
-        "rural_population": [30, 50]
+        "state": ["A", "B", "C", ""],
+        "anemia_women": [50, 60, "70", 30],
+        "bmi_low": [20, 30, pd.NA,30],
+        "child_mortality_rate": [10,15, -2, 1],
+        "female_education_years": [7,8, None, 5],
+        "rural_population": [30, 50, 40, 20]
 
     })
 
@@ -46,6 +51,7 @@ def test_upload_csv_invalid():
 
 
 def test_get_states_structure():
+    upload_data_for_testing(VALID_DATA_1)
     response = client.get("/states")
 
     assert response.status_code == 200
@@ -54,6 +60,7 @@ def test_get_states_structure():
     assert isinstance(data["states"], list)
 
 def test_top_states_by_score_default_n():
+    upload_data_for_testing(VALID_DATA_2)
     response = client.get("/top-states-by-score")
 
     assert response.status_code == 200
@@ -61,18 +68,20 @@ def test_top_states_by_score_default_n():
 
     assert "top_states_by_score" in data
     assert isinstance(data["top_states_by_score"], list)
-    assert len(data["top_states_by_score"]) <= 5
+    assert len(data["top_states_by_score"]) == 5
 
 def test_top_states_by_score_custom_n():
-    n = 10
+    upload_data_for_testing(VALID_DATA_1)
+    n = 3
     response = client.get(f"/top-states-by-score?n={n}")
 
     assert response.status_code == 200
     data = response.json()
 
-    assert len(data["top_states_by_score"]) <= n
+    assert len(data["top_states_by_score"]) == n
 
 def test_get_state_profile_valid_name():
+    upload_data_for_testing(SMALL_DATA_1)
     state = "A"
     response = client.get(f"/state-profile/{state}")
 
@@ -88,6 +97,7 @@ def test_get_state_profile_valid_name():
     assert "reason" in data
 
 def test_get_state_profile_invalid_name():
+    upload_data_for_testing(SMALL_DATA_1)
     state = "Random"
     response = client.get(f"/state-prodile/{state}")
 
