@@ -28,7 +28,7 @@ def home():
 
 # API to upload csv file
 @app.post("/upload")
-async def upload_csv(file: UploadFile):
+def upload_csv(file: UploadFile):
     if not file.filename.endswith('.csv'):
         # raise HTTPException with appropriate status code
         raise HTTPException(status_code=400, 
@@ -100,3 +100,7 @@ def get_state_profile(state_name: str):
     except StateNotFoundException as e:
         raise HTTPException(status_code=404, detail=str(e))
     return state_profile
+
+@app.get("/hello_world")
+def hello_world():
+    return "<p>Hello, World!</p>"
