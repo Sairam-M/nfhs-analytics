@@ -24,6 +24,7 @@ Backend API Docs Page - 🔗 [Backend API Docs (FastAPI Swagger UI)](https://nfh
 * **Database:** PostgreSQL
 * **ORM / DB Layer:** SQLAlchemy
 * **Deployment:** Render
+* **Containerization:** Docker
 
 ## 📦 Project Structure
 
@@ -35,7 +36,8 @@ Backend API Docs Page - 🔗 [Backend API Docs (FastAPI Swagger UI)](https://nfh
 │   ├── main.py
 │   ├── models.py
 │   └── service.py
-└── requirements.txt
+├── requirements.txt
+└── Dockerfile
 ```
 
 ## ⚙️ Setup & Installation
@@ -73,6 +75,24 @@ DATABASE_URL=<your_postgres_connection_string>
 ```bash
 uvicorn app.main:app --reload
 ```
+## 🐳 Running with Docker
+
+### Build the image
+```bash
+docker build -t nfhs-api .
+```
+
+### Run the container
+```bash
+docker run --env-file .env -p 8000:8000 nfhs-api
+```
+
+> The application uses environment variables (e.g., `DATABASE_URL`) for configuration.  
+> Ensure a `.env` file is present locally. In production, configure these variables via the deployment platform.
+
+### Access API
+- http://localhost:8000/docs
+
 
 ## 📡 API Endpoints
 
